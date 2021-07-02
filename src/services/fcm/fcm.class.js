@@ -139,7 +139,7 @@ exports.FCM = class FCM {
         title: `Notification from ${safeData.from.displayName}`,
         body: safeData.message.text,
         image: safeData.from.photoURL
-      } 
+      }
     }
 
     // send the notification
