@@ -1,5 +1,22 @@
 const axios = require('axios')
 
+const fcmConfig = {
+  sender: '888312469926',
+  key: 'AAAAztOMmaY:APA91bHKaqmBrcZdG-N9htjmXkGnUKYaKo3vbPyqUwW-CLwpPjA1xFwdo7HYpQgeg9k9_KcQX44DGMq9EnahgrGQDqcO49tcyuxC2LMltY4isDURhHLguje5AnqKk6saDbBoEB7lWtwq'
+}
+
+async function fcmSendNotificationRequest (data) {
+  return axios({
+    method: 'post',
+    url: 'https://fcm.googleapis.com/fcm/send',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `key=${fcmConfig.key}`
+    },
+    data
+  })
+}
+
 const createData = {
   type: '',
   from: null,
@@ -60,14 +77,22 @@ exports.FCM = class FCM {
     console.log(safeData)
     if (safeData.type === 'system') {
       console.log('system message, not implemented yet')
-      return safeData
+      return {
+        status: 'error',
+        error: Error('System messages unimplemented!'),
+        dataAfterMerge: safeData
+      }
     }
 
     if (safeData.type === 'message') {
       console.log('direct message, check target and validate')
       if (safeData.to.topic) {
         console.log('dm to topic, not implemented yet')
-        return safeData
+        return {
+          status: 'error',
+          error: Error('Topic messages unimplemented!'),
+          dataAfterMerge: safeData
+        }
       }
       if (safeData.to.token) {
         return this.notifyToToken(safeData)
@@ -86,7 +111,54 @@ exports.FCM = class FCM {
 
   async notifyToToken (safeData) {
     console.log('dm to token, building body...')
-    
-    return safeData
+
+    // check from presence
+    if (!safeData.from) {
+      console.log('NO FROM SPECIFIED')
+      return {
+        status: 'error',
+        error: Error('No FROM specified!'),
+        dataAfterMerge: safeData
+      }
+    }
+
+    // check from data presence
+    if (!safeData.from.uid || !safeData.from.displayName || !safeData.from.photoURL || !safeData.from.token) {
+      console.log('INVALID FROM')
+      return {
+        status: 'error',
+        error: Error('Invalid FROM object specified!'),
+        dataAfterMerge: safeData
+      }
+    }
+
+    // build fcm notification
+    const fcmData = {
+      to: safeData.to.token,
+      notification: {
+        title: `Notification from ${safeData.from.displayName}`,
+        body: safeData.message.text,
+        image: safeData.from.photoURL
+      } 
+    }
+
+    // send the notification
+    try {
+      const fcmResponse = await fcmSendNotificationRequest(fcmData)
+      console.log('fcm response')
+      console.log(fcmResponse.data)
+      return {
+        status: 'sent',
+        fcmResponse: fcmResponse.data
+      }
+    } catch (fcmError) {
+      console.error('FCM ERROR')
+      console.log(fcmError)
+      return {
+        status: 'error',
+        error: fcmError,
+        fcmData
+      }
+    }
   }
 }
