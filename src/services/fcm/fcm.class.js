@@ -25,7 +25,8 @@ const createData = {
     topic: null
   },
   message: {
-    text: ''
+    text: '',
+    data: null
   }
 }
 
@@ -62,7 +63,8 @@ exports.FCM = class FCM {
             },
             message: {
               // pridat volitelna data podle toho co lze nacpat do FCM (vyuzit zas toho jak to prelozit v ciloveem telefonu, tzn odesilani dat atp..)
-              text: '[string] text of the message'
+              text: '[string] text of the message',
+              data: '[object] payload of the message'
             }
           }
         }
@@ -140,6 +142,11 @@ exports.FCM = class FCM {
         body: safeData.message.text,
         image: safeData.from.photoURL
       }
+    }
+
+    // append data if present
+    if (safeData.message.data) {
+      fcmData.data = safeData.message.data
     }
 
     // send the notification
